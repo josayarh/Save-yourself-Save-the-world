@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [Serializable]
-class PlayerTimeTravelData
+struct PlayerBaseFrameData
 {
+    public byte[] id;
+    
     public float[] position;
     public float[] rotation;
     public float speed;

@@ -6,8 +6,7 @@ using UnityEngine;
 enum DynamicTags
 {
     Player,
-    Enemy,
-    Dynamic
+    Dynamic,
 }
 
 public class GameObjectStateManager : MonoBehaviour
@@ -15,13 +14,18 @@ public class GameObjectStateManager : MonoBehaviour
     private static GameObjectStateManager instance;
     private List<List<Tuple<Type, string>>> frameObjectList = new List<List<Tuple<Type, string>>>();
     private List<GameObject> dynamicGameObjectlist;
-    private int frameNumber = 0;
+    private uint frameNumber = 0;
     private List<GameObject> previousFrameObjects = new List<GameObject>();
+    
+    private Dictionary<Guid, Tuple<Type ,List<string>>> frameDataDictionary = new Dictionary<Guid, Tuple<Type, List<string>>>();
+    private Dictionary<uint, List<Guid>> objectApperanceDictionnary = new Dictionary<uint, List<Guid>>();
     
     private void Awake()
     {
         if (instance == null)
+        {
             instance = this;
+        }
         else
         {
             Destroy(gameObject);
@@ -33,12 +37,12 @@ public class GameObjectStateManager : MonoBehaviour
 
     private void FixedUpdate()
     {
-        foreach (var VARIABLE in previousFrameObjects)
+        /*foreach (var VARIABLE in previousFrameObjects)
         {
             Destroy(VARIABLE);
-        }
+        }*/
         reloadObjects();
-        saveFrame();
+        // saveFrame();
         frameNumber++;
     }
 
@@ -64,7 +68,7 @@ public class GameObjectStateManager : MonoBehaviour
         }
     }
 
-    private void saveFrame()
+    /*private void saveFrame()
     {
         List<Tuple<Type, string>> frameList;
         if(frameObjectList.Count < frameNumber + 1)
@@ -84,20 +88,24 @@ public class GameObjectStateManager : MonoBehaviour
                     break;
             }
         }
-    }
+    }*/
 
     private void reloadObjects()
     {
-        if (frameObjectList.Count >= frameNumber + 1)
+        List<Guid> objectList;
+        if (objectApperanceDictionnary.TryGetValue(frameNumber, out objectList))
         {
-            foreach (Tuple<Type, string> tuple in frameObjectList[frameNumber])
+            foreach(Guid id in objectList)
             {
-                if (tuple.Item1.IsEquivalentTo(typeof(PlayerController)))
+                Tuple<Type, List<string>> gameObjectTuple;
+                if (frameDataDictionary.TryGetValue(id, out gameObjectTuple))
                 {
-                    GameObject go = Instantiate(Resources.Load("Prefabs/Player Bot") as GameObject);
-                    PlayerBotController playerBotController = go.GetComponent<PlayerBotController>();
-                    playerBotController.LoadFrame(tuple.Item2);
-                    previousFrameObjects.Add(go);
+                    if (gameObjectTuple.Item1 == typeof(PlayerController))
+                    {
+                        GameObject go = Instantiate(Resources.Load("Prefabs/Player Bot") as GameObject);
+                        PlayerBotController playerBotController = go.GetComponent<PlayerBotController>();
+                        playerBotController.FrameSteps = gameObjectTuple.Item2;
+                    }
                 }
             }
         }
@@ -107,4 +115,33 @@ public class GameObjectStateManager : MonoBehaviour
     {
         get => instance;
     }
+
+    public void addDynamicObject(Guid guid, Type type, List<String> frameSave)
+    {
+        addDynamicObject(guid, type, frameSave, frameNumber);
+    }
+    
+    public void addDynamicObject(Guid guid, Type type, List<String> frameSave, uint saveFrameNumber)
+    {
+        Tuple<Type ,List<string>> couple = new Tuple<Type, List<string>>(type, frameSave);
+        List<Guid> list;
+
+        if (!objectApperanceDictionnary.TryGetValue(saveFrameNumber, out list))
+        {
+            list = new List<Guid>();
+            objectApperanceDictionnary.Add(saveFrameNumber, list);
+        }
+        list.Add(guid);
+        frameDataDictionary.Add(guid, couple);
+    }
+
+    public uint FrameNumber
+    {
+        get => frameNumber;
+    }
+}
+
+public class DynamicObjectCreatedEventArgs : EventArgs
+{
+    public GameObject go;
 }

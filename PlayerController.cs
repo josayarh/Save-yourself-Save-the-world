@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using System.Runtime.Serialization.Formatters.Binary;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -19,19 +20,30 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float turnSpeed = 30.0f;
     [SerializeField] private float accelerationFactor = 2;
     [SerializeField] private Transform gunTipPosition;
+
+    private Guid id; 
     
     private Camera mainCamera;
     private Rigidbody rigidBody;
     private GameObject laser;
     
     private float timer = 0.0f;
+
+    private List<String> frameSaveList = new List<string>();
     
     // Start is called before the first frame update
     void Start()
     {
+        id = Guid.NewGuid();
+        
         mainCamera = Camera.main;
         rigidBody = GetComponent<Rigidbody>();
         laser = Resources.Load("Prefabs/shot_prefab") as GameObject;
+        
+        DynamicObjectCreatedEventArgs eventArgs = new DynamicObjectCreatedEventArgs();
+        eventArgs.go = this.gameObject;
+        
+        frameSaveList.Add(SaveFrame());
     }
 
 
@@ -48,6 +60,8 @@ public class PlayerController : MonoBehaviour
         {
             fire();
         }
+        
+        frameSaveList.Add(SaveDiffFrame());
     }
 
     private void move()
@@ -82,14 +96,20 @@ public class PlayerController : MonoBehaviour
         timer = 0.0f;
     }
 
-    
+    public Guid Id
+    {
+        get => id;
+    }
 
     public string SaveFrame()
     {
         BinaryFormatter bf = new BinaryFormatter();
         MemoryStream ms = new MemoryStream();
         
-        PlayerTimeTravelData frameData = new PlayerTimeTravelData();
+        PlayerBaseFrameData frameData = new PlayerBaseFrameData();
+
+        frameData.id = new Byte[id.ToByteArray().Length];
+        id.ToByteArray().CopyTo(frameData.id,0);
 
         frameData.position = VectorArrayConverter.vector3ToArray(transform.position);
         frameData.rotation = VectorArrayConverter.vector3ToArray(transform.rotation.eulerAngles);
@@ -105,5 +125,25 @@ public class PlayerController : MonoBehaviour
         bf.Serialize(ms,frameData);
 
         return Convert.ToBase64String(ms.ToArray());
+    }
+    
+    public string SaveDiffFrame()
+    {
+        BinaryFormatter bf = new BinaryFormatter();
+        MemoryStream ms = new MemoryStream();
+        
+        PlayerDiffFrameData frameData = new PlayerDiffFrameData();
+
+        frameData.position = VectorArrayConverter.vector3ToArray(transform.position);
+        frameData.rotation = VectorArrayConverter.vector3ToArray(transform.rotation.eulerAngles);
+        
+        bf.Serialize(ms,frameData);
+
+        return Convert.ToBase64String(ms.ToArray());
+    }
+
+    private void OnDestroy()
+    {
+        GameObjectStateManager.Instance.addDynamicObject(id, GetType(),frameSaveList,0);
     }
 }
