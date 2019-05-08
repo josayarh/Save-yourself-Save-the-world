@@ -37,12 +37,7 @@ public class GameObjectStateManager : MonoBehaviour
 
     private void FixedUpdate()
     {
-        /*foreach (var VARIABLE in previousFrameObjects)
-        {
-            Destroy(VARIABLE);
-        }*/
         reloadObjects();
-        // saveFrame();
         frameNumber++;
     }
 
@@ -68,28 +63,6 @@ public class GameObjectStateManager : MonoBehaviour
         }
     }
 
-    /*private void saveFrame()
-    {
-        List<Tuple<Type, string>> frameList;
-        if(frameObjectList.Count < frameNumber + 1)
-            frameObjectList.Add(new List<Tuple<Type, string>>());
-        
-        frameList = frameObjectList[frameNumber];
-        
-        foreach (GameObject go in dynamicGameObjectlist)
-        {
-            switch (go.tag)
-            {
-                case "Player":
-                    PlayerController playerController = go.GetComponent<PlayerController>();
-                    string binarySave = playerController.SaveFrame();
-                    Type type = playerController.GetType();
-                    frameList.Add(new Tuple<Type, string>(type,String.Copy(binarySave)));
-                    break;
-            }
-        }
-    }*/
-
     private void reloadObjects()
     {
         List<Guid> objectList;
@@ -105,6 +78,18 @@ public class GameObjectStateManager : MonoBehaviour
                         GameObject go = Instantiate(Resources.Load("Prefabs/Player Bot") as GameObject);
                         PlayerBotController playerBotController = go.GetComponent<PlayerBotController>();
                         playerBotController.FrameSteps = gameObjectTuple.Item2;
+                    }
+                    else if (gameObjectTuple.Item1 == typeof(BulletManager))
+                    {
+                        GameObject go = Instantiate(Resources.Load("Prefabs/shot_prefab_bot") as GameObject);
+                        BulletBotController bulletBotController = go.GetComponent<BulletBotController>();
+                        bulletBotController.FrameSteps = gameObjectTuple.Item2;
+                    }
+                    else if(gameObjectTuple.Item1 == typeof(EnemyController))
+                    {
+                        GameObject go = Instantiate(Resources.Load("Prefabs/Enemy") as GameObject);
+                        EnemyController enemyController = go.GetComponent<EnemyController>();
+                        enemyController.FrameSaveList = gameObjectTuple.Item2;
                     }
                 }
             }
@@ -123,6 +108,13 @@ public class GameObjectStateManager : MonoBehaviour
     
     public void addDynamicObject(Guid guid, Type type, List<String> frameSave, uint saveFrameNumber)
     {
+        Tuple<Type, List<string>> tmp;
+        if (frameDataDictionary.TryGetValue(guid, out tmp))
+        {
+            Debug.Log("value is already in dictionnary");
+            return;
+        }
+        
         Tuple<Type ,List<string>> couple = new Tuple<Type, List<string>>(type, frameSave);
         List<Guid> list;
 
@@ -139,9 +131,4 @@ public class GameObjectStateManager : MonoBehaviour
     {
         get => frameNumber;
     }
-}
-
-public class DynamicObjectCreatedEventArgs : EventArgs
-{
-    public GameObject go;
 }

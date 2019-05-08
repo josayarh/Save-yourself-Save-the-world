@@ -6,22 +6,26 @@ using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class BulletManager : MonoBehaviour
+public class BulletManager : SavableObject
 {
-    private Guid id;
-    
+    private uint creationFrameNumber;
     [SerializeField] private float speed;
     private Vector3 direction;
 
     private void Start()
     {
+        frameSaveList = new List<string>();
+        
         id = Guid.NewGuid();
         direction = Camera.main.transform.forward;
+        frameSaveList.Add(SaveFrame());
+        creationFrameNumber = GameObjectStateManager.Instance.FrameNumber;
     }
 
     private void FixedUpdate()
     {
         transform.position += transform.forward * speed * Time.fixedDeltaTime;
+        frameSaveList.Add(SaveDiffFrame());
     }
 
     private void OnCollisionEnter(Collision other)
@@ -30,20 +34,29 @@ public class BulletManager : MonoBehaviour
         {
             Debug.Log("Enemy has been hit");
             //To change to damage system 
+            EnemyController enemyController = other.gameObject.GetComponent < EnemyController>();
+            enemyController.HasBeenKilled = true;
             Destroy(other.gameObject); 
         }
         
         Destroy(this.gameObject);
     }
 
-    public string SaveFrame()
+    private void OnTriggerEnter(Collider other)
+    {
+        Destroy(this.gameObject);
+    }
+
+    public override string SaveFrame()
     {
         BinaryFormatter bf = new BinaryFormatter();
         MemoryStream ms = new MemoryStream();
         
         BulletBaseFrameSave data = new BulletBaseFrameSave();
         
+        data.id = new Byte[id.ToByteArray().Length];
         id.ToByteArray().CopyTo(data.id,0);
+        
         data.speed = speed;
         data.position = VectorArrayConverter.vector3ToArray(transform.position);
         data.rotation = VectorArrayConverter.vector3ToArray(transform.rotation.eulerAngles);
@@ -53,7 +66,7 @@ public class BulletManager : MonoBehaviour
         return Convert.ToBase64String(ms.ToArray());
     }
     
-    public string SaveDiffFrame()
+    public override string SaveDiffFrame()
     {
         BinaryFormatter bf = new BinaryFormatter();
         MemoryStream ms = new MemoryStream();
@@ -68,45 +81,8 @@ public class BulletManager : MonoBehaviour
         return Convert.ToBase64String(ms.ToArray());
     }
     
-    public void LoadFrame(string binarySave)
+    private void OnDestroy()
     {
-        byte[] byteArray = Convert.FromBase64String(binarySave);
-        MemoryStream mf = new MemoryStream(byteArray);
-        BinaryFormatter bf = new BinaryFormatter();
-        BulletBaseFrameSave data = (BulletBaseFrameSave)bf.Deserialize(mf);
-        
-        id = new Guid(data.id);
-
-        transform.position = VectorArrayConverter.arrayToVector3(data.position);
-        transform.rotation = Quaternion.Euler(VectorArrayConverter.arrayToVector3(data.rotation));
-
-        speed = data.speed;
+        GameObjectStateManager.Instance.addDynamicObject(id, GetType(),frameSaveList,creationFrameNumber);
     }
-    
-    public void LoadDiffFrame(string binarySave)
-    {
-        byte[] byteArray = Convert.FromBase64String(binarySave);
-        MemoryStream mf = new MemoryStream(byteArray);
-        BinaryFormatter bf = new BinaryFormatter();
-        BulletDiffFrameData data = (BulletDiffFrameData)bf.Deserialize(mf);
-
-        transform.position = VectorArrayConverter.arrayToVector3(data.position);
-        transform.rotation = Quaternion.Euler(VectorArrayConverter.arrayToVector3(data.rotation));
-    }
-}
-
-[Serializable]
-struct BulletBaseFrameSave
-{
-    public byte[] id;
-    public float speed;
-    public float[] position;
-    public float[] rotation;
-}
-
-[Serializable]
-struct BulletDiffFrameData
-{
-    public float[] position;
-    public float[] rotation;
 }

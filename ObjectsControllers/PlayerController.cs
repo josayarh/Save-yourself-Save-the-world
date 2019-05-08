@@ -11,7 +11,7 @@ using UnityEngine.Serialization;
 using Vector3 = UnityEngine.Vector3;
 using Quaternion = UnityEngine.Quaternion;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : SavableObject
 {
     [SerializeField] private float speed;
     [SerializeField] private float rotateSpeedH;
@@ -20,16 +20,12 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float turnSpeed = 30.0f;
     [SerializeField] private float accelerationFactor = 2;
     [SerializeField] private Transform gunTipPosition;
-
-    private Guid id; 
     
     private Camera mainCamera;
     private Rigidbody rigidBody;
     private GameObject laser;
     
     private float timer = 0.0f;
-
-    private List<String> frameSaveList = new List<string>();
     
     // Start is called before the first frame update
     void Start()
@@ -39,9 +35,6 @@ public class PlayerController : MonoBehaviour
         mainCamera = Camera.main;
         rigidBody = GetComponent<Rigidbody>();
         laser = Resources.Load("Prefabs/shot_prefab") as GameObject;
-        
-        DynamicObjectCreatedEventArgs eventArgs = new DynamicObjectCreatedEventArgs();
-        eventArgs.go = this.gameObject;
         
         frameSaveList.Add(SaveFrame());
     }
@@ -84,24 +77,15 @@ public class PlayerController : MonoBehaviour
         
         AddRot.eulerAngles = new Vector3(-pitch, yaw, -roll);
         rigidBody.rotation *= AddRot;
-        
-        //transform.rotation = Quaternion.Euler(pitch,yaw, roll);
     }
 
     private void fire()
     {
-        Debug.Log(gunTipPosition.rotation);
-        GameObject tmp = Instantiate(laser, gunTipPosition.position, gunTipPosition.rotation);
-        
+        Instantiate(laser, gunTipPosition.position, gunTipPosition.rotation);
         timer = 0.0f;
     }
 
-    public Guid Id
-    {
-        get => id;
-    }
-
-    public string SaveFrame()
+    public override string SaveFrame()
     {
         BinaryFormatter bf = new BinaryFormatter();
         MemoryStream ms = new MemoryStream();
@@ -127,7 +111,7 @@ public class PlayerController : MonoBehaviour
         return Convert.ToBase64String(ms.ToArray());
     }
     
-    public string SaveDiffFrame()
+    public override string SaveDiffFrame()
     {
         BinaryFormatter bf = new BinaryFormatter();
         MemoryStream ms = new MemoryStream();
@@ -141,7 +125,7 @@ public class PlayerController : MonoBehaviour
 
         return Convert.ToBase64String(ms.ToArray());
     }
-
+    
     private void OnDestroy()
     {
         GameObjectStateManager.Instance.addDynamicObject(id, GetType(),frameSaveList,0);

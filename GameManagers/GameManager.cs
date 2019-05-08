@@ -76,4 +76,7 @@ public class GameManager : MonoBehaviour
         player = Instantiate(playerPrefab, pos, Quaternion.identity);
         GameObjectStateManager.Instance.initializeDynamicObjects();
     }
+
+    public GameObject Player => player;
+    public static GameManager Instance => gMInstance;
 }

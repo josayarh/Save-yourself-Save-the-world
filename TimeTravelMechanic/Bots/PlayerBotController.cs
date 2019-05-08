@@ -6,9 +6,8 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using UnityEngine;
 
-public class PlayerBotController : MonoBehaviour
+public class PlayerBotController : Bot
 {
-    private Guid id;
     
     private float speed;
     private float rotateSpeedH;
@@ -22,8 +21,6 @@ public class PlayerBotController : MonoBehaviour
     private GameObject laser;
     
     private float timer = 0.0f;
-
-    private List<String> frameSteps;
     
     // Start is called before the first frame update
     void Start()
@@ -32,27 +29,13 @@ public class PlayerBotController : MonoBehaviour
         laser = Resources.Load("Prefabs/shot_prefab") as GameObject;
     }
 
-    private void FixedUpdate()
+    private void OnCollisionStay(Collision other)
     {
-        uint frameNumber = GameObjectStateManager.Instance.FrameNumber;
-        if ( frameNumber < frameSteps.Count)
-        {
-            if (frameNumber == 0)
-            {
-                LoadFrame(frameSteps[(int)frameNumber]);
-            }
-            else
-            {
-                LoadDiffFrame(frameSteps[(int)frameNumber]);
-            }
-        }
-        else
-        {
-            Destroy(this.gameObject);
-        }
+        Debug.Log(other.gameObject.name);
+        Destroy(this);
     }
 
-    public void LoadFrame(string binarySave)
+    public override void LoadFrame(string binarySave)
     {
         byte[] byteArray = Convert.FromBase64String(binarySave);
         MemoryStream mf = new MemoryStream(byteArray);
@@ -65,7 +48,7 @@ public class PlayerBotController : MonoBehaviour
         transform.rotation = Quaternion.Euler(VectorArrayConverter.arrayToVector3(data.rotation));
     }
 
-    public void LoadDiffFrame(string binarySave)
+    public override void LoadDiffFrame(string binarySave)
     {
         byte[] byteArray = Convert.FromBase64String(binarySave);
         MemoryStream mf = new MemoryStream(byteArray);
@@ -76,17 +59,5 @@ public class PlayerBotController : MonoBehaviour
         transform.rotation = Quaternion.Euler(VectorArrayConverter.arrayToVector3(data.rotation));
     }
 
-    public List<string> FrameSteps
-    {
-        set
-        {
-            frameSteps = value;
-            LoadFrame(value[0]);
-        }
-    }
-
-    public Guid Id
-    {
-        get => id;
-    }
+    
 }
