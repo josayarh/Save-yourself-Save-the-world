@@ -8,9 +8,11 @@ using UnityEngine;
 public class EnemyController : SavableObject
 {
     [SerializeField] private float speed;
+    [SerializeField] private Transform guntipPosition;
     
     private bool hasBeenKilled = false;
     FSMSystem fsm = new FSMSystem();
+    bool isAiOn = false;
     
     // Start is called before the first frame update
     void Start()
@@ -22,9 +24,9 @@ public class EnemyController : SavableObject
     {
         uint frameNumber = GameObjectStateManager.Instance.FrameNumber;
         
-        if (frameSaveList.Count<=0 && frameNumber == 0)
+        if (frameSaveList.Count<=0)
         {
-            id = new Guid();
+            id = Guid.NewGuid();
             frameSaveList.Add(SaveFrame());
         }
         
@@ -34,8 +36,9 @@ public class EnemyController : SavableObject
                 Destroy(gameObject);
             else
             {
-                fsm.CurrentState.Reason(GameManager.Instance.gameObject, gameObject);
-                fsm.CurrentState.Act(GameManager.Instance.gameObject, gameObject);
+                isAiOn = true;
+                fsm.CurrentState.Reason(GameManager.Instance.Player, gameObject);
+                fsm.CurrentState.Act(GameManager.Instance.Player, gameObject);
                 frameSaveList.Add(SaveDiffFrame());
             }
         }
@@ -54,8 +57,14 @@ public class EnemyController : SavableObject
 
     private void makeFSM()
     {
-        EnemyMoveState moveState = new EnemyMoveState(gameObject.transform, speed);
-        fsm.AddState(moveState);
+        EnemyWanderState wanderState = new EnemyWanderState(gameObject.transform, Vector3.forward*speed, speed);
+        wanderState.AddTransition(Transition.Wander_Attack, StateID.EnemyAttackStateID);
+        
+        EnemyAttackState attackState = new EnemyAttackState(guntipPosition,Vector3.forward*speed, Resources.Load("Prefabs/shot_prefab") as GameObject);
+        attackState.AddTransition(Transition.Attack_Wander, StateID.EnemyWanderStateID);
+        
+        fsm.AddState(wanderState);
+        fsm.AddState(attackState);
     }
     
     public List<string> FrameSaveList
@@ -107,6 +116,7 @@ public class EnemyController : SavableObject
         byte[] byteArray = Convert.FromBase64String(binarySave);
         MemoryStream mf = new MemoryStream(byteArray);
         BinaryFormatter bf = new BinaryFormatter();
+
         EnemyFrameData data = (EnemyFrameData)bf.Deserialize(mf);
         
         id = new Guid(data.id);
@@ -138,6 +148,12 @@ public class EnemyController : SavableObject
     {
         frameSaveList.Add(SaveDiffFrame());
         GameObjectStateManager.Instance.addDynamicObject(id, GetType(),frameSaveList,0);
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if(other.CompareTag("Player") && isAiOn && fsm.CurrentState.ID == StateID.EnemyWanderStateID)
+            fsm.PerformTransition(Transition.Wander_Attack);
     }
 }
 

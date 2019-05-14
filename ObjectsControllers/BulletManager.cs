@@ -34,16 +34,15 @@ public class BulletManager : SavableObject
         {
             Debug.Log("Enemy has been hit");
             //To change to damage system 
-            EnemyController enemyController = other.gameObject.GetComponent < EnemyController>();
+            EnemyController enemyController = other.gameObject.GetComponent <EnemyController>();
             enemyController.HasBeenKilled = true;
             Destroy(other.gameObject); 
         }
+        else if (other.gameObject.CompareTag("Player"))
+        {
+            Destroy(other.gameObject); 
+        }
         
-        Destroy(this.gameObject);
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
         Destroy(this.gameObject);
     }
 

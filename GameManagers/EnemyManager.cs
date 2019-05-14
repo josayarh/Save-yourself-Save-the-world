@@ -15,6 +15,7 @@ public class EnemyManager : MonoBehaviour
     {
         if (instance == null)
         {
+            DontDestroyOnLoad(gameObject);
             enemyPrefab = Resources.Load("Prefabs/Enemy") as GameObject;
             instance = this;
             foreach (var position in enemyPositions)

@@ -52,6 +52,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 public enum Transition
 {
     NullTransition = 0, // Use this transition to represent a non-existing transition in your system
+    Wander_Attack =1,
+    Attack_Wander =2,
+    
 }
  
 /// <summary>
@@ -60,7 +63,9 @@ public enum Transition
 /// </summary>
 public enum StateID
 {
-    NullStateID = 0, // Use this ID to represent a non-existing State in your system	
+    NullStateID = 0, // Use this ID to represent a non-existing State in your system
+    EnemyWanderStateID =1,
+    EnemyAttackStateID =2,
 }
  
 /// <summary>

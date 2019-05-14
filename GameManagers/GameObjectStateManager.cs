@@ -111,20 +111,22 @@ public class GameObjectStateManager : MonoBehaviour
         Tuple<Type, List<string>> tmp;
         if (frameDataDictionary.TryGetValue(guid, out tmp))
         {
-            Debug.Log("value is already in dictionnary");
-            return;
+            tmp = new Tuple<Type, List<string>>(tmp.Item1, frameSave);
         }
-        
-        Tuple<Type ,List<string>> couple = new Tuple<Type, List<string>>(type, frameSave);
-        List<Guid> list;
-
-        if (!objectApperanceDictionnary.TryGetValue(saveFrameNumber, out list))
+        else
         {
-            list = new List<Guid>();
-            objectApperanceDictionnary.Add(saveFrameNumber, list);
+            Tuple<Type, List<string>> couple = new Tuple<Type, List<string>>(type, frameSave);
+            List<Guid> list;
+
+            if (!objectApperanceDictionnary.TryGetValue(saveFrameNumber, out list))
+            {
+                list = new List<Guid>();
+                objectApperanceDictionnary.Add(saveFrameNumber, list);
+            }
+
+            list.Add(guid);
+            frameDataDictionary.Add(guid, couple);
         }
-        list.Add(guid);
-        frameDataDictionary.Add(guid, couple);
     }
 
     public uint FrameNumber

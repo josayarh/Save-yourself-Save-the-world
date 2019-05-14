@@ -48,8 +48,13 @@ public class GameManager : MonoBehaviour
 
         if (currentTimeLeft <= 0)
         {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            reloadScene();
         }
+    }
+
+    public void reloadScene()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     private void reloadObject()

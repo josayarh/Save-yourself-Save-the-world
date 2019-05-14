@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 
 using Vector3 = UnityEngine.Vector3;
