@@ -126,9 +126,14 @@ public class PlayerController : SavableObject
 
         return Convert.ToBase64String(ms.ToArray());
     }
-    
-    private void OnDestroy()
+
+    public override void OnDestroy()
     {
-        GameObjectStateManager.Instance.addDynamicObject(id, GetType(),frameSaveList,0);
+        if (id != Guid.Empty)
+        {
+            frameSaveList.Add(SaveDiffFrame());
+            GameObjectStateManager.Instance.addDynamicObject(id, GetType(), frameSaveList, 0);
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
     }
 }

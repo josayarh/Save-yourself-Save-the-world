@@ -111,6 +111,8 @@ public class GameObjectStateManager : MonoBehaviour
         Tuple<Type, List<string>> tmp;
         if (frameDataDictionary.TryGetValue(guid, out tmp))
         {
+            if(frameSave.Count > frameNumber)
+                frameSave.RemoveRange((int)frameNumber-1,(int)(frameSave.Count - frameNumber));
             tmp = new Tuple<Type, List<string>>(tmp.Item1, frameSave);
         }
         else

@@ -8,7 +8,7 @@ public abstract class Bot : MonoBehaviour
     protected Guid id;
     protected List<String> frameSteps;
     
-    private void FixedUpdate()
+    public virtual void FixedUpdate()
     {
         uint frameNumber = GameObjectStateManager.Instance.FrameNumber;
         if ( frameNumber < frameSteps.Count)

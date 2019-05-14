@@ -15,4 +15,13 @@ public abstract class SavableObject : MonoBehaviour
     {
         get => id;
     }
+    
+    public virtual void OnDestroy()
+    {
+        if (id != Guid.Empty)
+        {
+            frameSaveList.Add(SaveDiffFrame());
+            GameObjectStateManager.Instance.addDynamicObject(id, GetType(), frameSaveList, 0);
+        }
+    }
 }

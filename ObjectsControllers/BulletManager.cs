@@ -79,9 +79,4 @@ public class BulletManager : SavableObject
 
         return Convert.ToBase64String(ms.ToArray());
     }
-    
-    private void OnDestroy()
-    {
-        GameObjectStateManager.Instance.addDynamicObject(id, GetType(),frameSaveList,creationFrameNumber);
-    }
 }

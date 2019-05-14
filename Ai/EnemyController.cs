@@ -57,10 +57,12 @@ public class EnemyController : SavableObject
 
     private void makeFSM()
     {
-        EnemyWanderState wanderState = new EnemyWanderState(gameObject.transform, Vector3.forward*speed, speed);
+        EnemyWanderState wanderState = new EnemyWanderState(gameObject.transform, Vector3.forward*speed);
         wanderState.AddTransition(Transition.Wander_Attack, StateID.EnemyAttackStateID);
         
-        EnemyAttackState attackState = new EnemyAttackState(guntipPosition,Vector3.forward*speed, Resources.Load("Prefabs/shot_prefab") as GameObject);
+        AttackState attackState = new AttackState(guntipPosition,Vector3.forward*speed, 
+            Resources.Load("Prefabs/shot_prefab") as GameObject);
+        attackState.Target = GameManager.Instance.Player;
         attackState.AddTransition(Transition.Attack_Wander, StateID.EnemyWanderStateID);
         
         fsm.AddState(wanderState);
@@ -142,12 +144,6 @@ public class EnemyController : SavableObject
     {
         get => hasBeenKilled;
         set => hasBeenKilled = value;
-    }
-
-    private void OnDestroy()
-    {
-        frameSaveList.Add(SaveDiffFrame());
-        GameObjectStateManager.Instance.addDynamicObject(id, GetType(),frameSaveList,0);
     }
 
     private void OnTriggerStay(Collider other)

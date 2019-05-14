@@ -7,44 +7,28 @@ using Vector3 = UnityEngine.Vector3;
 
 public class EnemyWanderState : FSMState
 {
-    private static float CIRCLE_RADIUS = 1.5f;
-    private static float CIRCLE_DISTANCE = 3;
     private static float TIME_TILL_DIRECTION_CHANGE = 2;
     private Transform enemyPosition;
     private Vector3 velocity;
-    private float speed;
     private float MaxSpeed = 3;
-    private float MaxForce = 1.5f;
     private float TimeSinceLastUpdate;
     Vector3 steering = new Vector3();
 
-    public EnemyWanderState(Transform enemyPosition, Vector3 velocity, float speed)
+    private WanderBehaviour wanderBehaviour = new WanderBehaviour();
+
+    public EnemyWanderState(Transform enemyPosition, Vector3 velocity)
     {
         this.enemyPosition = enemyPosition;
         this.velocity = velocity;
-        this.speed = speed;
 
         stateID = StateID.EnemyWanderStateID;
     }
-
-    public override void DoBeforeEntering()
-    {
-        base.DoBeforeEntering();
-    }
-
-    public override void DoBeforeLeaving()
-    {
-        base.DoBeforeLeaving();
-    }
     
-    /***
-     * 
-     */
     public override void Reason(GameObject player, GameObject npc)
     {
         if (Time.time - TimeSinceLastUpdate >= TIME_TILL_DIRECTION_CHANGE)
         {
-            steering = Vector3.ClampMagnitude(applyDisplacement(), MaxForce);
+            steering = wanderBehaviour.getSteeringForce(velocity);
             TimeSinceLastUpdate = Time.time;
         }
 
@@ -57,26 +41,5 @@ public class EnemyWanderState : FSMState
         enemyPosition.position += velocity*Time.fixedDeltaTime;
         enemyPosition.forward = velocity.normalized;
 
-    }
-
-    private Vector3 calcCircle()
-    {
-        Vector3 circlecenter = velocity;
-        
-        circlecenter.Normalize();
-        circlecenter *= CIRCLE_DISTANCE;
-        
-        return circlecenter;
-    }
-
-    private Vector3 applyDisplacement()
-    {
-        Vector3 circleCenter = calcCircle();
-        Vector3 randomPoint = Random.insideUnitCircle;
-        
-        randomPoint.Normalize();
-        randomPoint *= CIRCLE_RADIUS;
-
-        return circleCenter + Quaternion.LookRotation(velocity) * randomPoint;
     }
 }

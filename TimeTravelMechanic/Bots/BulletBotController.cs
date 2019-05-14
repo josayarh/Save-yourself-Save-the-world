@@ -34,4 +34,21 @@ public class BulletBotController : Bot
         transform.position = VectorArrayConverter.arrayToVector3(data.position);
         transform.rotation = Quaternion.Euler(VectorArrayConverter.arrayToVector3(data.rotation));
     }
+    
+    private void OnCollisionEnter(Collision other)
+    {
+        if (other.gameObject.CompareTag("Enemy"))
+        {
+            Debug.Log("Bot Bullet touched enemy ");
+            //To change to damage system 
+            Destroy(other.gameObject); 
+        }
+        else if (other.gameObject.CompareTag("Player"))
+        {
+            Debug.Log("Bot Bullet touched Player ");
+            Destroy(other.gameObject); 
+        }
+        
+        Destroy(this.gameObject);
+    }
 }
