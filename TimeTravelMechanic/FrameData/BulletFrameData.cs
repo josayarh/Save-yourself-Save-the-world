@@ -7,6 +7,8 @@ struct BulletBaseFrameSave
     public float speed;
     public float[] position;
     public float[] rotation;
+    public float[] direction;
+    public byte[] shipOriginId;
 }
 
 [Serializable]

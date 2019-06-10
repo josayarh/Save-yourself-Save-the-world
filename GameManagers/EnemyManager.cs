@@ -18,9 +18,9 @@ public class EnemyManager : MonoBehaviour
             DontDestroyOnLoad(gameObject);
             enemyPrefab = Resources.Load("Prefabs/Enemy") as GameObject;
             instance = this;
-            foreach (var position in enemyPositions)
+            foreach (var transform in enemyPositions)
             {
-                Instantiate(enemyPrefab, position.position, Quaternion.identity);
+                GameObject go = Pool.Instance.get(PoolableTypes.Enemy, transform);
             }
         }
         else

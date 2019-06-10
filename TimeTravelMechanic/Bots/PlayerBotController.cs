@@ -6,7 +6,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using UnityEngine;
 
-public class PlayerBotController : Bot
+public class PlayerBotController : Bot, IPoolableObject, BaseAI
 {
     private float speed;
     private float rotateSpeedH;
@@ -14,12 +14,14 @@ public class PlayerBotController : Bot
     private float fireRate;
     private float turnSpeed;
     private float accelerationFactor;
+    
     [SerializeField] private Transform gunTipPosition;
+    [SerializeField] private float detectRange;
     
     private Rigidbody rigidBody;
     private GameObject laser;
-    
-    FSMSystem fsm = new FSMSystem();
+
+    private FSMSystem fsm;
     bool isAiOn = false;
     
     private float timer = 0.0f;
@@ -31,16 +33,23 @@ public class PlayerBotController : Bot
     {
         rigidBody = GetComponent<Rigidbody>();
         laser = Resources.Load("Prefabs/shot_prefab") as GameObject;
+    }
+
+    public void OnPoolCreation()
+    {
         makeFSM();
     }
     
     private void makeFSM()
     {
-        EnemyWanderState wanderState = new EnemyWanderState(gameObject.transform, Vector3.forward*speed);
+        fsm = new FSMSystem();
+        
+        WanderState wanderState = new WanderState(gameObject.transform, Vector3.forward*speed,
+            NpcType.Enemy, detectRange);
         wanderState.AddTransition(Transition.Wander_Attack, StateID.EnemyAttackStateID);
         
         attackState = new AttackState(gunTipPosition,Vector3.forward*speed, 
-            Resources.Load("Prefabs/shot_prefab") as GameObject);
+            Resources.Load("Prefabs/shot_prefab") as GameObject, id);
         attackState.Target = GameManager.Instance.Player;
         attackState.AddTransition(Transition.Attack_Wander, StateID.EnemyWanderStateID);
         
@@ -71,11 +80,16 @@ public class PlayerBotController : Bot
             }
         }
     }
-
-    private void OnCollisionStay(Collision other)
+    
+    public void wanderAttackTransistion(GameObject target)
     {
-        Debug.Log(other.gameObject.name);
-        Destroy(this);
+        attackState.Target = target;
+        fsm.PerformTransition(Transition.Wander_Attack);
+    }
+
+    public void attackWanderTransition()
+    {
+        fsm.PerformTransition(Transition.Attack_Wander);
     }
     
     public string SaveDiffFrame()
@@ -117,12 +131,18 @@ public class PlayerBotController : Bot
         transform.rotation = Quaternion.Euler(VectorArrayConverter.arrayToVector3(data.rotation));
     }
 
-    private void OnTriggerStay(Collider other)
+    public void OnRelease()
     {
-        if (other.CompareTag("Enemy") && isAiOn && fsm.CurrentState.ID == StateID.EnemyWanderStateID)
+        if (id != Guid.Empty)
         {
-            fsm.PerformTransition(Transition.Wander_Attack);
-            attackState.Target = other.gameObject;
+            frameSteps.Add(SaveDiffFrame());
+            GameObjectStateManager.Instance.addDynamicObject(id, GetType(), frameSteps, 0);
         }
+    }
+
+    public void Destroy()
+    {
+        
+        Pool.Instance.release(gameObject, PoolableTypes.PlayerBot);
     }
 }

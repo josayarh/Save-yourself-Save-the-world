@@ -1,9 +1,12 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class AttackState : FSMState
 {
+    private Guid id;
+    
     private Transform gunTipPosition;
     private Vector3 velocity;
     
@@ -21,11 +24,12 @@ public class AttackState : FSMState
     SeekBehaviour seekBehaviour = null;
 
 
-    public AttackState(Transform gunTipPosition, Vector3 velocity, GameObject laserPrefab)
+    public AttackState(Transform gunTipPosition, Vector3 velocity, GameObject laserPrefab, Guid npcId)
     {
         this.gunTipPosition = gunTipPosition;
         this.velocity = velocity;
         this.laserPrefab = laserPrefab;
+        this.id = npcId;
         
         seekBehaviour = new SeekBehaviour();
         
@@ -34,11 +38,17 @@ public class AttackState : FSMState
 
     public override void Reason(GameObject player, GameObject npc)
     {
-        steering = seekBehaviour.getSeekForce(target.transform, npc.transform, velocity);
-
-        velocity = Vector3.ClampMagnitude(velocity + steering, max_speed);
-            
-        timer += Time.deltaTime;
+        if (target == null || !target.activeSelf)
+        {
+            BaseAI baseAi = npc.GetComponent<BaseAI>();
+            baseAi.attackWanderTransition();
+        }
+        else
+        {
+            steering = seekBehaviour.getSeekForce(target.transform, npc.transform, velocity);
+            velocity = Vector3.ClampMagnitude(velocity + steering, max_speed);
+            timer += Time.deltaTime;
+        }
     }
 
     public override void Act(GameObject player, GameObject npc)
@@ -50,7 +60,8 @@ public class AttackState : FSMState
 
         if (Mathf.Abs(angle) < 90 && timer > 1.0f)
         {
-            GameObject.Instantiate(laserPrefab, gunTipPosition.position, gunTipPosition.rotation);
+            GameObject bullet = Pool.Instance.get(PoolableTypes.Bullets, gunTipPosition, id);
+            
             timer = 0.0f;
         }
     }

@@ -46,14 +46,15 @@ public class GameManager : MonoBehaviour
         currentTimeLeft -= Time.deltaTime;
         timerText.text = currentTimeLeft.ToString("#.##");
 
-        if (currentTimeLeft <= 0)
-        {
-            reloadScene();
-        }
+//        if (currentTimeLeft <= 0)
+//        {
+//            reloadScene();
+//        }
     }
 
     public void reloadScene()
     {
+        Pool.Instance.recycleAllObjects();
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 

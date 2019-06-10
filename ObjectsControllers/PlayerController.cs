@@ -38,6 +38,7 @@ public class PlayerController : SavableObject
         laser = Resources.Load("Prefabs/shot_prefab") as GameObject;
         
         frameSaveList.Add(SaveFrame());
+        GameObjectStateManager.Instance.InstanciatedGameobjects.Add(id,gameObject);
     }
 
 
@@ -82,7 +83,7 @@ public class PlayerController : SavableObject
 
     private void fire()
     {
-        Instantiate(laser, gunTipPosition.position, gunTipPosition.rotation);
+        GameObject bullet = Pool.Instance.get(PoolableTypes.Bullets, gunTipPosition, id);
         timer = 0.0f;
     }
 
@@ -126,14 +127,15 @@ public class PlayerController : SavableObject
 
         return Convert.ToBase64String(ms.ToArray());
     }
-
-    public override void OnDestroy()
+    
+    public void Destroy()
     {
         if (id != Guid.Empty)
         {
             frameSaveList.Add(SaveDiffFrame());
             GameObjectStateManager.Instance.addDynamicObject(id, GetType(), frameSaveList, 0);
-            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            GameManager.Instance.reloadScene();
+            Destroy(gameObject);
         }
     }
 }
