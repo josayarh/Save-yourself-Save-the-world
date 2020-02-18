@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using FLFlight;
 using UnityEngine;
 
 enum DynamicTags
@@ -15,7 +16,8 @@ public class GameObjectStateManager : MonoBehaviour
     private List<GameObject> dynamicGameObjectlist;
     private uint frameNumber = 0;
     
-    private Dictionary<Guid, Tuple<Type ,List<string>>> frameDataDictionary = new Dictionary<Guid, Tuple<Type, List<string>>>();
+    private Dictionary<Guid, Tuple<Type ,List<string>>> frameDataDictionary 
+        = new Dictionary<Guid, Tuple<Type, List<string>>>();
     private Dictionary<uint, List<Guid>> objectApperanceDictionnary = new Dictionary<uint, List<Guid>>();
     private Dictionary<Guid, GameObject> instanciatedGameobjects = new Dictionary<Guid, GameObject>();
     /***
@@ -86,25 +88,20 @@ public class GameObjectStateManager : MonoBehaviour
 
                     if (parentIds.TryGetValue(id, out tryGetParentGuid))
                     {
-                        if (instanciatedGameobjects.TryGetValue(tryGetParentGuid, out tryGetGameObject))
-                        {
-                            if (tryGetGameObject == null || !tryGetGameObject.activeSelf)
-                            {
-                                break;
-                            }
-                        }
+                        if (!doesParentExist(id))
+                            break;
                     }
 
-                    if (gameObjectTuple.Item1 == typeof(PlayerController))
-                    {
-                        go = Pool.Instance.get(PoolableTypes.PlayerBot);
-                        PlayerBotController playerBotController = go.GetComponent<PlayerBotController>();
-                        playerBotController.FrameSteps = gameObjectTuple.Item2;
-                    }
+                    // if (gameObjectTuple.Item1 == typeof(PlayerSave))
+                    // {
+                    //     go = Pool.Instance.get(PoolableTypes.PlayerBot);
+                    //     Ship ship  = go.GetComponent<Ship>();
+                    //     ship.FrameSteps = gameObjectTuple.Item2;
+                    // }
                     else if (gameObjectTuple.Item1 == typeof(BulletController))
                     {
                         go = Pool.Instance.get(PoolableTypes.BulletBot);
-                        BulletBotController bulletBotController = go.GetComponent<BulletBotController>();
+                        BulletBotController bulletBotController  = go.GetComponent<BulletBotController>();
                         bulletBotController.FrameSteps = gameObjectTuple.Item2;
                     }
                     else if(gameObjectTuple.Item1 == typeof(EnemyController))
@@ -116,15 +113,7 @@ public class GameObjectStateManager : MonoBehaviour
 
                     if (go != null)
                     {
-                        tryGetGameObject = null;
-                        if (instanciatedGameobjects.TryGetValue(id,out tryGetGameObject))
-                        {
-                            tryGetGameObject = go;
-                        }
-                        else
-                        {
-                            instanciatedGameobjects.Add(id,go);
-                        }
+                        addInstanciatedObject(id, go);
                     }
                 }
             }
@@ -134,6 +123,19 @@ public class GameObjectStateManager : MonoBehaviour
     public static GameObjectStateManager Instance
     {
         get => instance;
+    }
+    
+    public void addInstanciatedObject(Guid objectId, GameObject instanciatedObject)
+    {
+        GameObject tryGetGameObject = null;
+        if (instanciatedGameobjects.TryGetValue(objectId,out tryGetGameObject))
+        {
+            tryGetGameObject = instanciatedObject;
+        }
+        else
+        {
+            instanciatedGameobjects.Add(objectId,instanciatedObject);
+        }
     }
 
     public void addDynamicObject(Guid guid, Type type, List<String> frameSave)
@@ -164,6 +166,42 @@ public class GameObjectStateManager : MonoBehaviour
             list.Add(guid);
             frameDataDictionary.Add(guid, couple);
         }
+    }
+
+    public bool doesParentExist(Guid childGUID)
+    {
+        bool existance = false;
+        Guid parentGUID;
+
+        if (parentIds.TryGetValue(childGUID, out parentGUID))
+        {
+            GameObject parentObject;
+            if (instanciatedGameobjects.TryGetValue(parentGUID, out parentObject))
+            {
+                if (parentObject != null && parentObject.activeSelf)
+                    existance = true;
+            }   
+        }
+
+        return existance;
+    }
+
+    public GameObject getParent(Guid childGUID)
+    {
+        GameObject parentObject = null;
+        Guid parentGUID;
+
+        if (parentIds.TryGetValue(childGUID, out parentGUID))
+        {
+            GameObject tempObject = null;
+            if (instanciatedGameobjects.TryGetValue(parentGUID, out tempObject))
+            {
+                if (tempObject != null && tempObject.activeSelf)
+                    parentObject = tempObject;
+            }   
+        }
+
+        return parentObject;
     }
 
     public uint FrameNumber

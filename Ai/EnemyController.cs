@@ -10,7 +10,8 @@ public class EnemyController : SavableObject, IPoolableObject, BaseAI
     [SerializeField] private float speed;
     [SerializeField] private Transform guntipPosition;
     [SerializeField] private float detectRange;
-    
+    [SerializeField] private Material aiMaterial;
+    [SerializeField] private Material replayMaterial;
     
     private bool hasBeenKilled = false;
     FSMSystem fsm;
@@ -20,7 +21,7 @@ public class EnemyController : SavableObject, IPoolableObject, BaseAI
 
     public void OnPoolCreation()
     {
-        makeFSM();
+        changeChildMaterial(gameObject.transform.GetChild(0).gameObject, replayMaterial);
     }
 
     private void FixedUpdate()
@@ -30,7 +31,8 @@ public class EnemyController : SavableObject, IPoolableObject, BaseAI
         if (frameSaveList.Count<=0)
         {
             id = Guid.NewGuid();
-            frameSaveList.Add(SaveFrame());
+            frameSaveList.Add(MakeFrame());
+            makeFSM();
         }
         
         if (frameSaveList.Count <= frameNumber)
@@ -39,19 +41,28 @@ public class EnemyController : SavableObject, IPoolableObject, BaseAI
                 Destroy();
             else
             {
+                if (!isAiOn)
+                {
+                    changeChildMaterial(gameObject.transform.GetChild(0).gameObject, aiMaterial);
+                }
+                
                 isAiOn = true;
-                
-                if( fsm.CurrentStateID == StateID.EnemyWanderStateID
-                    && Vector3.Distance(GameManager.Instance.Player.transform.position, transform.position) < detectRange)
+
+                if (fsm.CurrentStateID == StateID.EnemyWanderStateID
+                    && Vector3.Distance(GameManager.Instance.Player.transform.position, transform.position)
+                    < detectRange)
+                {
                     wanderAttackTransistion(GameManager.Instance.Player);
-                
+                }
+
                 fsm.CurrentState.Reason(GameManager.Instance.Player, gameObject);
                 fsm.CurrentState.Act(GameManager.Instance.Player, gameObject);
-                frameSaveList.Add(SaveDiffFrame());
+                frameSaveList.Add(MakeDiffFrame());
             }
         }
         else
         {
+            isAiOn = false;
             if (frameNumber == 0)
             {
                 LoadFrame(frameSaveList[(int)frameNumber]);
@@ -67,8 +78,8 @@ public class EnemyController : SavableObject, IPoolableObject, BaseAI
     {
         fsm = new FSMSystem();
         
-        WanderState wanderState = new WanderState(gameObject.transform, Vector3.forward*speed,
-            NpcType.PlayerBot, detectRange);
+        WanderState wanderState = new WanderState(gameObject, Vector3.forward*speed,
+            NpcType.PlayerBot, detectRange, guntipPosition);
         wanderState.AddTransition(Transition.Wander_Attack, StateID.EnemyAttackStateID);
         
         attackState = new AttackState(guntipPosition,Vector3.forward*speed, 
@@ -97,6 +108,7 @@ public class EnemyController : SavableObject, IPoolableObject, BaseAI
         {
             frameSaveList = value;
             LoadFrame(value[0]);
+            makeFSM();
         }
     }
 
@@ -105,18 +117,30 @@ public class EnemyController : SavableObject, IPoolableObject, BaseAI
         if (id != Guid.Empty)
         {
             fsm = null;
-            frameSaveList.Add(SaveDiffFrame());
+            frameSaveList.Add(MakeDiffFrame());
             GameObjectStateManager.Instance.addDynamicObject(id, GetType(), frameSaveList, 0);
             frameSaveList = new List<string>();
+            id = Guid.Empty;
         }
     }
 
     public void Destroy()
     {
+        hasBeenKilled = true;
         Pool.Instance.release(gameObject, PoolableTypes.Enemy);
     }
 
-    public override string SaveFrame()
+    private void changeChildMaterial(GameObject parentGameObject,Material materialToApply)
+    {
+        GameObject child;
+        for (int c=0; c < parentGameObject.transform.childCount; c++)
+        {
+            child = parentGameObject.transform.GetChild(c).gameObject;
+            child.GetComponent<Renderer>().material = materialToApply;
+        }
+    }
+
+    public override string MakeFrame()
     {
         BinaryFormatter bf = new BinaryFormatter();
         MemoryStream ms = new MemoryStream();
@@ -135,7 +159,7 @@ public class EnemyController : SavableObject, IPoolableObject, BaseAI
         return Convert.ToBase64String(ms.ToArray());
     }
 
-    public override string SaveDiffFrame()
+    public override string MakeDiffFrame()
     {
         BinaryFormatter bf = new BinaryFormatter();
         MemoryStream ms = new MemoryStream();
@@ -183,6 +207,8 @@ public class EnemyController : SavableObject, IPoolableObject, BaseAI
         get => hasBeenKilled;
         set => hasBeenKilled = value;
     }
+
+    public bool IsAiOn => isAiOn;
 }
 
 [Serializable]

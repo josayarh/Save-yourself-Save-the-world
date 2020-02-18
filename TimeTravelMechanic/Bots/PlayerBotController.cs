@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
+using FLFlight;
 using UnityEngine;
 
 public class PlayerBotController : Bot, IPoolableObject, BaseAI
@@ -17,6 +18,8 @@ public class PlayerBotController : Bot, IPoolableObject, BaseAI
     
     [SerializeField] private Transform gunTipPosition;
     [SerializeField] private float detectRange;
+    [SerializeField] private Material underAiMaterial;
+    [SerializeField] private Material replayMaterial;
     
     private Rigidbody rigidBody;
     private GameObject laser;
@@ -27,6 +30,9 @@ public class PlayerBotController : Bot, IPoolableObject, BaseAI
     private float timer = 0.0f;
 
     private AttackState attackState;
+    private Guid killerGUID = new Guid();
+
+    private int frameCountOnLoad;
     
     // Start is called before the first frame update
     void Start()
@@ -38,22 +44,22 @@ public class PlayerBotController : Bot, IPoolableObject, BaseAI
     public void OnPoolCreation()
     {
         makeFSM();
+        changeChildMaterial(gameObject.transform.GetChild(0).gameObject, replayMaterial);
     }
     
     private void makeFSM()
     {
         fsm = new FSMSystem();
         
-        WanderState wanderState = new WanderState(gameObject.transform, Vector3.forward*speed,
-            NpcType.Enemy, detectRange);
-        wanderState.AddTransition(Transition.Wander_Attack, StateID.EnemyAttackStateID);
+        FollowState followState = new FollowState(GameManager.Instance.Player, 
+            GameManager.Instance.Player.GetComponent<Ship>(), speed, NpcType.Enemy);
+        followState.AddTransition(Transition.Follow_Attack, StateID.EnemyAttackStateID);
         
         attackState = new AttackState(gunTipPosition,Vector3.forward*speed, 
             Resources.Load("Prefabs/shot_prefab") as GameObject, id);
-        attackState.Target = GameManager.Instance.Player;
-        attackState.AddTransition(Transition.Attack_Wander, StateID.EnemyWanderStateID);
+        attackState.AddTransition(Transition.Attack_Follow, StateID.BotFollowStateID);
         
-        fsm.AddState(wanderState);
+        fsm.AddState(followState);
         fsm.AddState(attackState);
     }
 
@@ -61,12 +67,17 @@ public class PlayerBotController : Bot, IPoolableObject, BaseAI
     {
         uint frameNumber = GameObjectStateManager.Instance.FrameNumber;
         
-        if (frameSteps.Count <= frameNumber)
+        if (frameCountOnLoad <= frameNumber)
         {
+            if(!isAiOn)
+                changeChildMaterial(gameObject.transform.GetChild(0).gameObject, underAiMaterial);
+            
             isAiOn = true;
             fsm.CurrentState.Reason(GameManager.Instance.Player, gameObject);
             fsm.CurrentState.Act(GameManager.Instance.Player, gameObject);
             frameSteps.Add(SaveDiffFrame());
+            if(killerGUID != Guid.Empty)
+                Destroy(killerGUID);
         }
         else
         {
@@ -84,12 +95,12 @@ public class PlayerBotController : Bot, IPoolableObject, BaseAI
     public void wanderAttackTransistion(GameObject target)
     {
         attackState.Target = target;
-        fsm.PerformTransition(Transition.Wander_Attack);
+        fsm.PerformTransition(Transition.Follow_Attack);
     }
 
     public void attackWanderTransition()
     {
-        fsm.PerformTransition(Transition.Attack_Wander);
+        fsm.PerformTransition(Transition.Attack_Follow);
     }
     
     public string SaveDiffFrame()
@@ -101,11 +112,18 @@ public class PlayerBotController : Bot, IPoolableObject, BaseAI
 
         frameData.position = VectorArrayConverter.vector3ToArray(transform.position);
         frameData.rotation = VectorArrayConverter.vector3ToArray(transform.rotation.eulerAngles);
+
+        if (killerGUID != Guid.Empty)
+        {
+            frameData.killerGUID = new Byte[killerGUID.ToByteArray().Length];
+            killerGUID.ToByteArray().CopyTo(frameData.killerGUID,0);
+        }
         
         bf.Serialize(ms,frameData);
 
         return Convert.ToBase64String(ms.ToArray());
     }
+    
 
     public override void LoadFrame(string binarySave)
     {
@@ -129,20 +147,53 @@ public class PlayerBotController : Bot, IPoolableObject, BaseAI
 
         transform.position = VectorArrayConverter.arrayToVector3(data.position);
         transform.rotation = Quaternion.Euler(VectorArrayConverter.arrayToVector3(data.rotation));
+
+        if (data.killerGUID != null)
+        {
+            killerGUID = new Guid(data.killerGUID);
+            if (GameObjectStateManager.Instance.doesParentExist(killerGUID))
+            {
+                Destroy(killerGUID);
+            }
+        }
+    }
+    
+    private void changeChildMaterial(GameObject parentGameObject,Material materialToApply)
+    {
+        GameObject child;
+        for (int c=0; c < parentGameObject.transform.childCount; c++)
+        {
+            child = parentGameObject.transform.GetChild(c).gameObject;
+            child.GetComponent<Renderer>().material = materialToApply;
+        }
     }
 
     public void OnRelease()
     {
-        if (id != Guid.Empty)
+        isAiOn = false;
+        if (id != Guid.Empty && frameSteps.Count <= GameObjectStateManager.Instance.FrameNumber)
         {
-            frameSteps.Add(SaveDiffFrame());
             GameObjectStateManager.Instance.addDynamicObject(id, GetType(), frameSteps, 0);
+            frameSteps = new List<string>();
         }
     }
 
-    public void Destroy()
+    public void Destroy(Guid killerGuid = new Guid())
     {
-        
-        Pool.Instance.release(gameObject, PoolableTypes.PlayerBot);
+        if (GameObjectStateManager.Instance.doesParentExist(killerGuid))
+        {
+            killerGUID = killerGuid;
+            Pool.Instance.release(gameObject, PoolableTypes.PlayerBot);
+        }
+    }
+
+    public List<string> FrameSteps
+    {
+        set
+        {
+            frameSteps = value;
+            LoadFrame(frameSteps[0]);
+            frameCountOnLoad = value.Count;
+        }
     }
 }

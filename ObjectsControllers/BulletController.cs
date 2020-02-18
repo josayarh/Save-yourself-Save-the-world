@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using FLFlight;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -14,7 +15,7 @@ public class BulletController : SavableObject, IPoolableObject
     public void OnPoolCreation()
     {
         id = Guid.NewGuid();
-        frameSaveList.Add(SaveFrame());
+        frameSaveList.Add(MakeFrame());
         creationFrameNumber = GameObjectStateManager.Instance.FrameNumber;
     }
 
@@ -30,6 +31,16 @@ public class BulletController : SavableObject, IPoolableObject
             Debug.Log("Bot Bullet touched enemy ");
             EnemyController ectrl = other.gameObject.GetComponent<EnemyController>();
             ectrl.Destroy();
+            
+            GameObject parentObject = GameObjectStateManager.Instance.getParent(id);
+            if (parentObject)
+            {
+                Ship controler = parentObject.GetComponent<Ship>();
+                if (controler && !controler.IsPlayer)
+                {
+                    controler.addRewardOnKill();
+                }
+            }
         }
         else if (other.gameObject.CompareTag("Player"))
         {
@@ -38,14 +49,14 @@ public class BulletController : SavableObject, IPoolableObject
 
             if (pBCtrl)
             {
-                pBCtrl.Destroy();
+                pBCtrl.Destroy(id);
             }
             else
             {
-                PlayerController pc = other.gameObject.GetComponent<PlayerController>();
+                Ship pc = other.gameObject.GetComponent<Ship>();
                 if (pc)
                 {
-                    pc.Destroy();
+                    pc.Destroy(id);
                 }
                 else
                 {
@@ -69,7 +80,7 @@ public class BulletController : SavableObject, IPoolableObject
         frameSaveList = new List<string>();
     }
 
-    public override string SaveFrame()
+    public override string MakeFrame()
     {
         BinaryFormatter bf = new BinaryFormatter();
         MemoryStream ms = new MemoryStream();
@@ -89,7 +100,7 @@ public class BulletController : SavableObject, IPoolableObject
         return Convert.ToBase64String(ms.ToArray());
     }
     
-    public override string SaveDiffFrame()
+    public override string MakeDiffFrame()
     {
         BinaryFormatter bf = new BinaryFormatter();
         MemoryStream ms = new MemoryStream();
@@ -107,5 +118,11 @@ public class BulletController : SavableObject, IPoolableObject
     public void Destroy()
     {
         Pool.Instance.release(gameObject, PoolableTypes.Bullets);
+    }
+
+    public float Speed
+    {
+        get => speed;
+        set => speed = value;
     }
 }

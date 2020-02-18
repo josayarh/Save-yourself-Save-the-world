@@ -8,4 +8,5 @@ struct PlayerDiffFrameData
 {
     public float[] position;
     public float[] rotation;
+    public byte[] killerGUID;
 }

@@ -61,14 +61,14 @@ public class BulletBotController : Bot, IPoolableObject
 
             if (pBCtrl)
             {
-                pBCtrl.Destroy();
+                pBCtrl.Destroy(id);
             }
             else
             {
                 PlayerController pc = other.gameObject.GetComponent<PlayerController>();
                 if (pc)
                 {
-                    pc.Destroy();
+                    pc.Destroy(id);
                 }
                 else
                 {

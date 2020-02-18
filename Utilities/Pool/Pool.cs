@@ -9,7 +9,8 @@ public enum PoolableTypes
     Enemy = 1,
     PlayerBot = 2,
     Bullets = 3,
-    BulletBot = 4
+    BulletBot = 4,
+    Player = 5
 }
 
 public class Pool : MonoBehaviour
@@ -59,7 +60,7 @@ public class Pool : MonoBehaviour
             
             for (uint c = 0; c < tmp.numberOfObjects; c++)
             {
-                GameObject newObject = Instantiate(tmp.prefab, transform);
+                GameObject newObject = Instantiate(tmp.prefab, gameObject.transform);
                 newObject.SetActive(false);
                 tmpList.Add(newObject);
             }
@@ -77,6 +78,11 @@ public class Pool : MonoBehaviour
             instanciatedGameObjectsList.RemoveAt(lastIndex);
             activeGameObjects.Add(go);
             IPoolableObject ipo = go.GetComponent<IPoolableObject>();
+
+            if (ipo == null)
+            {
+                ipo = go.GetComponentInChildren<IPoolableObject>();
+            }
 
             if (locationData != null)
             {
@@ -101,9 +107,12 @@ public class Pool : MonoBehaviour
                     if (savableObjectScript != null)
                         objectId = savableObjectScript.Id;
                 }
-                if(objectId != Guid.Empty && 
-                   !GameObjectStateManager.Instance.ParentIds.TryGetValue(objectId, out getId))
-                    GameObjectStateManager.Instance.ParentIds.Add(objectId,parentGuid);
+
+                if (objectId != Guid.Empty &&
+                    !GameObjectStateManager.Instance.ParentIds.TryGetValue(objectId, out getId))
+                {
+                    GameObjectStateManager.Instance.ParentIds.Add(objectId, parentGuid);
+                }
             }
             
             go.SetActive(true);
@@ -127,7 +136,7 @@ public class Pool : MonoBehaviour
     {
         for (int c = 0; c < prefabToPoolArray.Length; c++)
         {
-            if (String.Equals(releasedObject.name, prefabToPoolArray[c].prefab.name + "(Clone)"))
+            if (String.Equals(releasedObject.name, prefabToPoolArray[c].prefab.name+"(Clone)"))
             {
                 release(releasedObject, prefabToPoolArray[c].key);
                 break;
@@ -137,27 +146,36 @@ public class Pool : MonoBehaviour
 
     public void release(GameObject releasedObject, PoolableTypes objectType)
     {
-        List<GameObject> instanciatedGameObjectsList;
-        
-        if (disabledGameObjects.TryGetValue(objectType, out instanciatedGameObjectsList))
+        if (activeGameObjects.Contains(releasedObject))
         {
-            instanciatedGameObjectsList.Add(releasedObject);
-        }
+            List<GameObject> instanciatedGameObjectsList;
 
-        IPoolableObject ipo = releasedObject.GetComponent<IPoolableObject>();
-        ipo.OnRelease();
-        
-        activeGameObjects.Remove(releasedObject);
-        if (objectType == PoolableTypes.Enemy)
-        {
-            enemyList.Remove(releasedObject);
-        } 
-        else if (objectType == PoolableTypes.PlayerBot)
-        {
-            playerBotList.Remove(releasedObject);
+            if (disabledGameObjects.TryGetValue(objectType, out instanciatedGameObjectsList))
+            {
+                instanciatedGameObjectsList.Add(releasedObject);
+            }
+
+            IPoolableObject ipo = releasedObject.GetComponent<IPoolableObject>();
+            
+            if (ipo == null)
+            {
+                ipo = releasedObject.GetComponentInChildren<IPoolableObject>();
+            }
+            
+            ipo.OnRelease();
+
+            activeGameObjects.Remove(releasedObject);
+            if (objectType == PoolableTypes.Enemy)
+            {
+                enemyList.Remove(releasedObject);
+            }
+            else if (objectType == PoolableTypes.PlayerBot)
+            {
+                playerBotList.Remove(releasedObject);
+            }
+
+            releasedObject.SetActive(false);
         }
-        
-        releasedObject.SetActive(false);
     }
 
     public void recycleAllObjects()
